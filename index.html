@@ -218,46 +218,65 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // ==== AI Teachable Machine ====
-    const URL = "/model/";
-    let model, webcam, labelContainer;
+   <!-- JS: AI (Teachable Machine) -->
+<script>
+  // ✅ Đặt URL theo đường dẫn gốc (root)
+  const URL = "/model/";
+  let model, webcam, labelContainer, maxPredictions;
 
-    async function init() {
-      try {
-        await tf.setBackend('webgl').catch(() => tf.setBackend('cpu'));
-        const modelURL = URL + "model.json";
-        const metadataURL = URL + "metadata.json";
-        model = await tmImage.load(modelURL, metadataURL);
-        webcam = new tmImage.Webcam(300, 300, true);
-        await webcam.setup();
-        await webcam.play();
-        window.requestAnimationFrame(loop);
+  async function init() {
+    try {
+      // ✅ Dùng GPU nếu có, fallback CPU nếu thiết bị yếu
+      await tf.setBackend('webgl').catch(() => tf.setBackend('cpu'));
 
-        const container = document.getElementById("webcam-container");
-        container.innerHTML = "";
-        container.appendChild(webcam.canvas);
-        labelContainer = document.getElementById("label-container");
-        labelContainer.innerHTML = "Đang nhận diện...";
-      } catch (err) {
-        console.error(err);
-        document.getElementById("label-container").innerHTML =
-          "<span style='color:red'>⚠️ Không thể tải model hoặc bật camera!</span>";
+      const modelURL = URL + "model.json";
+      const metadataURL = URL + "metadata.json";
+
+      // ✅ Kiểm tra trước khi load để báo lỗi dễ hiểu
+      const response = await fetch(modelURL);
+      if (!response.ok) {
+        throw new Error(`Không tìm thấy model (${response.status}) tại ${modelURL}`);
       }
-    }
 
-    async function loop() {
-      webcam.update();
-      await predict();
+      // ✅ Tải model và metadata
+      model = await tmImage.load(modelURL, metadataURL);
+      maxPredictions = model.getTotalClasses();
+
+      // ✅ Khởi tạo webcam
+      const flip = true;
+      webcam = new tmImage.Webcam(300, 300, flip);
+      await webcam.setup();
+      await webcam.play();
       window.requestAnimationFrame(loop);
-    }
 
-    async function predict() {
-      const prediction = await model.predict(webcam.canvas);
-      let best = prediction.reduce((a, b) => (a.probability > b.probability ? a : b));
-      labelContainer.innerHTML =
-        `♻️ Loại rác: <b>${best.className}</b><br>🔍 Độ tin cậy: ${(best.probability * 100).toFixed(1)}%`;
+      // ✅ Hiển thị webcam trên giao diện
+      const container = document.getElementById("webcam-container");
+      container.innerHTML = "";
+      container.appendChild(webcam.canvas);
+      labelContainer = document.getElementById("label-container");
+      labelContainer.innerHTML = "Đang nhận diện...";
+    } catch (err) {
+      console.error("Lỗi khởi tạo model:", err);
+      document.getElementById("label-container").innerHTML =
+        `<span style="color:#c0392b;">⚠️ Lỗi tải model: ${err.message}</span><br>
+         Kiểm tra lại thư mục /model/ và file model.json, metadata.json, weights.bin`;
     }
+  }
 
+  async function loop() {
+    webcam.update();
+    await predict();
+    window.requestAnimationFrame(loop);
+  }
+
+  async function predict() {
+    const prediction = await model.predict(webcam.canvas);
+    let best = prediction.reduce((a, b) => (a.probability > b.probability ? a : b));
+    labelContainer.innerHTML = `
+      ♻️ Loại rác: <b>${best.className}</b><br>
+      🔍 Độ tin cậy: ${(best.probability * 100).toFixed(1)}%`;
+  }
+</script>
     // ==== Upload ảnh & bình chọn ====
     const gallery = document.getElementById('gallery');
     const rankList = document.getElementById('rank-list');
@@ -303,5 +322,31 @@
       });
     }
   </script>
+<!-- REGISTER SERVICE WORKER & LISTEN FOR UPDATES -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/service-worker.js').then(reg => {
+    console.log('SW registered', reg);
+
+    reg.onupdatefound = () => {
+      const newWorker = reg.installing;
+      newWorker.onstatechange = () => {
+        if (newWorker.state === 'installed') {
+          // If there's an existing controller, this is an update.
+          if (navigator.serviceWorker.controller) {
+            // Notify user (or auto-reload)
+            // You can customize UI prompt instead of confirm()
+            if (confirm("Đã có phiên bản mới. Tải lại để cập nhật?")) {
+              window.location.reload();
+            }
+          } else {
+            console.log("Content cached for offline use.");
+          }
+        }
+      };
+    };
+  }).catch(err => console.error("SW register failed:", err));
+}
+</script>
 </body>
 </html>
