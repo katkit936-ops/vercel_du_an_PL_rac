@@ -2,48 +2,54 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>🌎 Phân loại rác thông minh</title>
 
-  <!-- Thư viện AI -->
+  <!-- TensorFlow + Teachable Machine -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
 
-  <!-- CSS Framework -->
+  <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
-  <!-- Google Font & Custom Style -->
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700&display=swap" rel="stylesheet">
+
   <style>
+    /* ====== Tổng thể ====== */
     body {
       font-family: 'Nunito', sans-serif;
-      background: linear-gradient(180deg, #d4f5dc, #fdfdfd);
+      background: linear-gradient(180deg, #e9fce9, #fefefe);
       color: #333;
       margin: 0;
       min-height: 100vh;
       overflow-x: hidden;
+      text-align: center;
     }
 
+    /* ====== Thanh menu ====== */
     nav {
       background: #3cb371;
-      padding: 10px;
+      padding: 8px 0;
       display: flex;
-      justify-content: center;
       flex-wrap: wrap;
+      justify-content: center;
+      gap: 5px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
     }
 
     nav button {
       background: #ffffff;
       border: none;
-      margin: 5px;
-      padding: 10px 16px;
+      padding: 10px 15px;
       border-radius: 25px;
-      font-size: 16px;
+      font-size: 15px;
       color: #3cb371;
-      font-weight: bold;
-      transition: all 0.2s ease;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+      font-weight: 700;
+      transition: 0.2s ease;
+      flex: 1;
+      max-width: 120px;
     }
 
     nav button.active, nav button:hover {
@@ -52,29 +58,67 @@
       transform: scale(1.05);
     }
 
+    /* ====== Tab nội dung ====== */
     .tab {
       display: none;
-      padding: 25px;
+      padding: 20px 10px;
       animation: fadeIn 0.5s ease;
     }
     .tab.active { display: block; }
 
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
+      from { opacity: 0; transform: translateY(15px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
-    .title {
+    h3.title {
       color: #2e8b57;
       font-weight: 700;
       margin-bottom: 15px;
+      font-size: 1.3rem;
     }
 
+    /* ====== Camera ====== */
     #webcam-container canvas {
+      width: 90vw;          /* 90% chiều rộng màn hình */
+      max-width: 360px;
+      height: auto;
       border-radius: 12px;
       border: 3px solid #3cb371;
+      margin-top: 10px;
     }
 
+    /* ====== Nút chính ====== */
+    .btn-eco {
+      background-color: #2e8b57;
+      color: white;
+      border-radius: 25px;
+      padding: 14px 24px;
+      font-size: 1.1rem;
+      border: none;
+      font-weight: 700;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      margin-bottom: 15px;
+    }
+
+    .btn-eco:active { transform: scale(0.97); }
+
+    /* ====== Ảnh & Gallery ====== */
+    .gallery img {
+      width: 45vw;
+      max-width: 150px;
+      height: auto;
+      border-radius: 10px;
+      margin: 8px;
+      border: 3px solid #2e8b57;
+      transition: transform 0.2s;
+    }
+
+    .gallery img:hover {
+      transform: scale(1.05);
+    }
+
+    /* ====== Video ====== */
     .video-grid iframe {
       width: 100%;
       height: 220px;
@@ -82,65 +126,49 @@
       margin-bottom: 15px;
     }
 
-    .gallery img {
-      width: 150px;
-      height: 150px;
-      border-radius: 10px;
-      margin: 10px;
-      border: 3px solid #2e8b57;
-      transition: transform 0.2s ease;
-    }
-
-    .gallery img:hover {
-      transform: scale(1.05);
-    }
-
-    .btn-eco {
-      background-color: #2e8b57;
-      color: white;
-      border-radius: 25px;
-      padding: 10px 18px;
-      border: none;
-      font-weight: bold;
-    }
-
-    .btn-eco:hover {
-      background-color: #267347;
-    }
-
+    /* ====== Footer ====== */
     footer {
       text-align: center;
       padding: 15px;
       background: #3cb371;
       color: white;
       font-weight: 600;
+      font-size: 14px;
       box-shadow: 0 -2px 5px rgba(0,0,0,0.2);
       margin-top: 20px;
+    }
+
+    /* ====== Responsive bổ sung ====== */
+    @media (max-width: 480px) {
+      nav button {
+        font-size: 13px;
+        padding: 8px 10px;
+      }
+      h3.title { font-size: 1.2rem; }
     }
   </style>
 </head>
 
 <body>
-
-  <!-- Thanh điều hướng -->
+  <!-- ==== Thanh điều hướng ==== -->
   <nav>
-    <button onclick="showTab('tab1')" class="active">📸 Nhận diện</button>
-    <button onclick="showTab('tab2')">🎥 Video</button>
-    <button onclick="showTab('tab3')">🔧 Dự án tái chế</button>
-    <button onclick="showTab('tab4')">🖼️ Sản phẩm</button>
-    <button onclick="showTab('tab5')">🏆 Xếp hạng</button>
+    <button onclick="showTab('tab1', event)" class="active">📸 Nhận diện</button>
+    <button onclick="showTab('tab2', event)">🎥 Video</button>
+    <button onclick="showTab('tab3', event)">🔧 Tái chế</button>
+    <button onclick="showTab('tab4', event)">🖼️ Sản phẩm</button>
+    <button onclick="showTab('tab5', event)">🏆 Xếp hạng</button>
   </nav>
 
-  <!-- TAB 1: NHẬN DIỆN -->
-  <div id="tab1" class="tab active text-center">
+  <!-- ==== TAB 1: NHẬN DIỆN ==== -->
+  <div id="tab1" class="tab active">
     <h3 class="title">📸 Nhận diện rác bằng AI</h3>
     <p>Nhấn nút bên dưới để bật camera và quét vật thể rác.</p>
-    <button class="btn-eco mb-3" onclick="init()">🚀 Bắt đầu camera</button>
-    <div id="webcam-container" class="mt-3"></div>
+    <button class="btn-eco" onclick="init()">🚀 Bắt đầu camera</button>
+    <div id="webcam-container"></div>
     <div id="label-container" class="mt-3 fs-5 fw-bold text-success"></div>
   </div>
 
-  <!-- TAB 2: VIDEO -->
+  <!-- ==== TAB 2: VIDEO ==== -->
   <div id="tab2" class="tab">
     <h3 class="title">🎥 Quy trình xử lý rác thải</h3>
     <div class="video-grid">
@@ -149,65 +177,72 @@
     </div>
   </div>
 
-  <!-- TAB 3: DỰ ÁN TÁI CHẾ -->
+  <!-- ==== TAB 3: DỰ ÁN ==== -->
   <div id="tab3" class="tab">
-    <h3 class="title">🔧 Dự án tái chế cho học sinh</h3>
-    <ul class="fs-5">
-      <li>🌸 Làm chậu cây từ chai nhựa cũ</li>
-      <li>🕯️ Tạo nến thơm từ vỏ cam</li>
-      <li>📦 Trang trí hộp giấy cũ thành hộp bút sáng tạo</li>
+    <h3 class="title">🔧 Dự án tái chế đơn giản</h3>
+    <ul class="fs-5 list-unstyled">
+      <li>🌸 Làm chậu cây từ chai nhựa</li>
+      <li>🕯️ Làm nến thơm từ vỏ cam</li>
+      <li>📦 Trang trí hộp giấy thành hộp bút</li>
     </ul>
-    <p class="fw-bold text-success mt-3">👉 Thực hiện 1 dự án và chia sẻ sản phẩm của bạn ở tab "Sản phẩm".</p>
+    <p class="fw-bold text-success mt-3">
+      👉 Hãy thử và chia sẻ sản phẩm của bạn ở tab “Sản phẩm”.
+    </p>
   </div>
 
-  <!-- TAB 4: UPLOAD -->
-  <div id="tab4" class="tab text-center">
-    <h3 class="title">🖼️ Chia sẻ sản phẩm tái chế</h3>
+  <!-- ==== TAB 4: UPLOAD ==== -->
+  <div id="tab4" class="tab">
+    <h3 class="title">🖼️ Sản phẩm tái chế</h3>
     <input type="file" id="imgUpload" accept="image/*" class="form-control w-75 mx-auto mb-3">
     <button class="btn-eco" onclick="uploadImage()">📤 Tải lên</button>
-    <div id="gallery" class="gallery mt-4 d-flex flex-wrap justify-content-center"></div>
+    <div id="gallery" class="gallery d-flex flex-wrap justify-content-center"></div>
   </div>
 
-  <!-- TAB 5: XẾP HẠNG -->
+  <!-- ==== TAB 5: XẾP HẠNG ==== -->
   <div id="tab5" class="tab">
-    <h3 class="title text-center">🏆 Bảng xếp hạng sản phẩm tái chế</h3>
+    <h3 class="title">🏆 Bảng xếp hạng bình chọn</h3>
     <ul id="rank-list" class="fs-5 list-group w-75 mx-auto"></ul>
   </div>
 
-  <!-- FOOTER -->
+  <!-- ==== FOOTER ==== -->
   <footer>🌱 Học sinh xanh – Hành tinh xanh 🌎 | Dự án AI giáo dục 2025</footer>
 
-  <!-- JS: CHUYỂN TAB -->
+  <!-- ==== JAVASCRIPT ==== -->
   <script>
-    function showTab(id) {
+    // ==== Chuyển tab ====
+    function showTab(id, event) {
       document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
       document.getElementById(id).classList.add('active');
       event.target.classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  </script>
 
-  <!-- JS: AI -->
-  <script>
-    const URL = "./model/";
-    let model, webcam, labelContainer, maxPredictions;
+    // ==== AI Teachable Machine ====
+    const URL = "/model/";
+    let model, webcam, labelContainer;
 
     async function init() {
-      const modelURL = URL + "model.json";
-      const metadataURL = URL + "metadata.json";
-      model = await tmImage.load(modelURL, metadataURL);
-      maxPredictions = model.getTotalClasses();
+      try {
+        await tf.setBackend('webgl').catch(() => tf.setBackend('cpu'));
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
+        model = await tmImage.load(modelURL, metadataURL);
+        webcam = new tmImage.Webcam(300, 300, true);
+        await webcam.setup();
+        await webcam.play();
+        window.requestAnimationFrame(loop);
 
-      const flip = true;
-      webcam = new tmImage.Webcam(300, 300, flip);
-      await webcam.setup();
-      await webcam.play();
-      window.requestAnimationFrame(loop);
-
-      document.getElementById("webcam-container").innerHTML = "";
-      document.getElementById("webcam-container").appendChild(webcam.canvas);
-      labelContainer = document.getElementById("label-container");
-      labelContainer.innerHTML = "Đang nhận diện...";
+        const container = document.getElementById("webcam-container");
+        container.innerHTML = "";
+        container.appendChild(webcam.canvas);
+        labelContainer = document.getElementById("label-container");
+        labelContainer.innerHTML = "Đang nhận diện...";
+      } catch (err) {
+        console.error(err);
+        document.getElementById("label-container").innerHTML =
+          "<span style='color:red'>⚠️ Không thể tải model hoặc bật camera!</span>";
+      }
     }
 
     async function loop() {
@@ -218,14 +253,12 @@
 
     async function predict() {
       const prediction = await model.predict(webcam.canvas);
-      let best = prediction[0];
-      for (let p of prediction) if (p.probability > best.probability) best = p;
-      labelContainer.innerHTML = `♻️ Loại rác: <b>${best.className}</b> <br> 🔍 Độ tin cậy: ${(best.probability * 100).toFixed(1)}%`;
+      let best = prediction.reduce((a, b) => (a.probability > b.probability ? a : b));
+      labelContainer.innerHTML =
+        `♻️ Loại rác: <b>${best.className}</b><br>🔍 Độ tin cậy: ${(best.probability * 100).toFixed(1)}%`;
     }
-  </script>
 
-  <!-- JS: Upload + Bình chọn -->
-  <script>
+    // ==== Upload ảnh & bình chọn ====
     const gallery = document.getElementById('gallery');
     const rankList = document.getElementById('rank-list');
     let images = [];
@@ -242,8 +275,8 @@
       reader.readAsDataURL(file);
     }
 
-    function vote(index) {
-      images[index].votes++;
+    function vote(i) {
+      images[i].votes++;
       renderGallery();
       renderRank();
     }
@@ -252,7 +285,7 @@
       gallery.innerHTML = '';
       images.forEach((img, i) => {
         gallery.innerHTML += `
-          <div class="text-center">
+          <div>
             <img src="${img.src}" alt="Sản phẩm tái chế">
             <p>❤️ ${img.votes}</p>
             <button class="btn btn-outline-success btn-sm" onclick="vote(${i})">Bình chọn</button>
@@ -262,14 +295,13 @@
 
     function renderRank() {
       rankList.innerHTML = '';
-      const sorted = [...images].sort((a,b) => b.votes - a.votes);
+      const sorted = [...images].sort((a, b) => b.votes - a.votes);
       sorted.forEach((img, i) => {
-        rankList.innerHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">
-          #${i+1} <span>❤️ ${img.votes}</span>
+        rankList.innerHTML += `<li class="list-group-item d-flex justify-content-between">
+          #${i + 1} <span>❤️ ${img.votes}</span>
         </li>`;
       });
     }
   </script>
-
 </body>
 </html>
