@@ -208,48 +208,38 @@
   <footer>🌱 Học sinh xanh – Hành tinh xanh 🌎 | Dự án AI giáo dục 2025</footer>
 
   <!-- ==== JAVASCRIPT ==== -->
-  <script>
-    // ==== Chuyển tab ====
-    function showTab(id, event) {
-      document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
-      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-      document.getElementById(id).classList.add('active');
-      event.target.classList.add('active');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-   <!-- JS: AI (Teachable Machine) -->
 <script>
-  // ✅ Đặt URL theo đường dẫn gốc (root)
+  // ==== Chuyển tab ====
+  function showTab(id, event) {
+    document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    event.target.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ==== AI (Teachable Machine) ====
   const URL = "/model/";
   let model, webcam, labelContainer, maxPredictions;
 
   async function init() {
     try {
-      // ✅ Dùng GPU nếu có, fallback CPU nếu thiết bị yếu
       await tf.setBackend('webgl').catch(() => tf.setBackend('cpu'));
-
       const modelURL = URL + "model.json";
       const metadataURL = URL + "metadata.json";
 
-      // ✅ Kiểm tra trước khi load để báo lỗi dễ hiểu
       const response = await fetch(modelURL);
-      if (!response.ok) {
-        throw new Error(`Không tìm thấy model (${response.status}) tại ${modelURL}`);
-      }
+      if (!response.ok) throw new Error(`Không tìm thấy model (${response.status}) tại ${modelURL}`);
 
-      // ✅ Tải model và metadata
       model = await tmImage.load(modelURL, metadataURL);
       maxPredictions = model.getTotalClasses();
 
-      // ✅ Khởi tạo webcam
       const flip = true;
       webcam = new tmImage.Webcam(300, 300, flip);
       await webcam.setup();
       await webcam.play();
       window.requestAnimationFrame(loop);
 
-      // ✅ Hiển thị webcam trên giao diện
       const container = document.getElementById("webcam-container");
       container.innerHTML = "";
       container.appendChild(webcam.canvas);
@@ -276,77 +266,74 @@
       ♻️ Loại rác: <b>${best.className}</b><br>
       🔍 Độ tin cậy: ${(best.probability * 100).toFixed(1)}%`;
   }
-</script>
-    // ==== Upload ảnh & bình chọn ====
-</script>    
-    const gallery = document.getElementById('gallery');
-    const rankList = document.getElementById('rank-list');
-    let images = [];
 
-    function uploadImage() {
-      const file = document.getElementById('imgUpload').files[0];
-      if (!file) return alert('Vui lòng chọn ảnh!');
-      const reader = new FileReader();
-      reader.onload = e => {
-        const src = e.target.result;
-        images.push({ src, votes: 0 });
-        renderGallery();
-      };
-      reader.readAsDataURL(file);
-    }
+  // ==== Upload ảnh & bình chọn ====
+  const gallery = document.getElementById('gallery');
+  const rankList = document.getElementById('rank-list');
+  let images = [];
 
-    function vote(i) {
-      images[i].votes++;
+  function uploadImage() {
+    const file = document.getElementById('imgUpload').files[0];
+    if (!file) return alert('Vui lòng chọn ảnh!');
+    const reader = new FileReader();
+    reader.onload = e => {
+      const src = e.target.result;
+      images.push({ src, votes: 0 });
       renderGallery();
-      renderRank();
-    }
+    };
+    reader.readAsDataURL(file);
+  }
 
-    function renderGallery() {
-      gallery.innerHTML = '';
-      images.forEach((img, i) => {
-        gallery.innerHTML += `
-          <div>
-            <img src="${img.src}" alt="Sản phẩm tái chế">
-            <p>❤️ ${img.votes}</p>
-            <button class="btn btn-outline-success btn-sm" onclick="vote(${i})">Bình chọn</button>
-          </div>`;
-      });
-    }
+  function vote(i) {
+    images[i].votes++;
+    renderGallery();
+    renderRank();
+  }
 
-    function renderRank() {
-      rankList.innerHTML = '';
-      const sorted = [...images].sort((a, b) => b.votes - a.votes);
-      sorted.forEach((img, i) => {
-        rankList.innerHTML += `<li class="list-group-item d-flex justify-content-between">
+  function renderGallery() {
+    gallery.innerHTML = '';
+    images.forEach((img, i) => {
+      gallery.innerHTML += `
+        <div class="text-center">
+          <img src="${img.src}" alt="Sản phẩm tái chế">
+          <p>❤️ ${img.votes}</p>
+          <button class="btn btn-outline-success btn-sm" onclick="vote(${i})">Bình chọn</button>
+        </div>`;
+    });
+  }
+
+  function renderRank() {
+    rankList.innerHTML = '';
+    const sorted = [...images].sort((a, b) => b.votes - a.votes);
+    sorted.forEach((img, i) => {
+      rankList.innerHTML += `
+        <li class="list-group-item d-flex justify-content-between align-items-center">
           #${i + 1} <span>❤️ ${img.votes}</span>
         </li>`;
-      });
-    }
+    });
+  }
 </script>
-<!-- REGISTER SERVICE WORKER & LISTEN FOR UPDATES -->
+
+<!-- ==== SERVICE WORKER ==== -->
 <script>
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js').then(reg => {
-    console.log('SW registered', reg);
-
+    console.log('✅ Service Worker registered:', reg);
     reg.onupdatefound = () => {
       const newWorker = reg.installing;
       newWorker.onstatechange = () => {
         if (newWorker.state === 'installed') {
-          // If there's an existing controller, this is an update.
           if (navigator.serviceWorker.controller) {
-            // Notify user (or auto-reload)
-            // You can customize UI prompt instead of confirm()
-            if (confirm("Đã có phiên bản mới. Tải lại để cập nhật?")) {
+            if (confirm("🚀 Có bản cập nhật mới! Tải lại để áp dụng?")) {
               window.location.reload();
             }
           } else {
-            console.log("Content cached for offline use.");
+            console.log("📦 Ứng dụng sẵn sàng dùng offline.");
           }
         }
       };
     };
-  }).catch(err => console.error("SW register failed:", err));
+  }).catch(err => console.error("❌ SW register failed:", err));
 }
 </script>
 </body>
