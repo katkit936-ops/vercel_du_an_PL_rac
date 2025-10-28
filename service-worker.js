@@ -35,19 +35,20 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   const reqUrl = new URL(event.request.url);
 
-  // Serve model files (so model updates get fetched if available)
-  if (reqUrl.pathname.startsWith("/model/")) {
-    event.respondWith(
-      fetch(event.request)
-        .then(resp => {
-          // update cache so offline still works
-          caches.open(CACHE_VERSION).then(cache => cache.put(event.request, resp.clone()));
-          return resp;
-        })
-        .catch(() => caches.match(event.request))
-    );
-    return;
-  }
+    // Serve model files (so model updates get fetched if available)
+if (reqUrl.pathname.startsWith("/model/")) {
+  event.respondWith(
+    fetch(event.request)
+      .then(resp => {
+        // ✅ Clone ngay lập tức để tránh lỗi "Response body already used"
+        const respClone = resp.clone();
+        caches.open(CACHE_VERSION).then(cache => cache.put(event.request, respClone));
+        return resp;
+      })
+      .catch(() => caches.match(event.request))
+  );
+  return;
+}
 
   // For everything else: cache-first
   event.respondWith(
