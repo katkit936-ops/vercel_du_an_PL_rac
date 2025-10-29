@@ -66,11 +66,25 @@ async function startCamera() {
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
     const video = document.createElement("video");
+
+    // ⚙️ Tắt "Live Broadcast" trên iPhone & iPad
+    video.setAttribute("autoplay", "");
+    video.setAttribute("muted", "");        // iOS yêu cầu video tự động phát phải tắt tiếng
+    video.setAttribute("playsinline", "");  // bắt buộc viết thường, không phải playsInline
+
     video.width = size;
     video.height = size;
-    video.autoplay = true;
-    video.playsInline = true; // tránh iPhone bật full-screen
     video.srcObject = stream;
+
+    // 🎨 Giao diện camera
+    video.style.border = "3px solid #3cb371";
+    video.style.borderRadius = "14px";
+    video.style.maxWidth = isMobile ? "80vw" : "60vw";
+    video.style.aspectRatio = "1 / 1";
+    video.style.objectFit = "cover";
+    video.style.boxShadow = "0 4px 10px rgba(0,0,0,0.25)";
+    video.classList.add("active");
+
 
     // Giao diện camera
     video.style.border = "3px solid #3cb371";
