@@ -1,6 +1,6 @@
 /* ===============================
-   🌎 PHÂN LOẠI RÁC - STYLE TỔNG HỢP
-   Tối ưu cho Desktop & Mobile (iOS/Android)
+   🌎 PHÂN LOẠI RÁC - STYLE HOÀN CHỈNH
+   Tối ưu cho Desktop & Mobile
    =============================== */
 
 /* ====== TOÀN TRANG ====== */
@@ -101,37 +101,6 @@ h3.title {
     0 4px 12px rgba(0, 0, 0, 0.2),
     0 0 18px rgba(60, 179, 113, 0.25);
   transition: all 0.3s ease;
-}
-
-/* ====== MOBILE CAMERA ====== */
-@media (max-width: 600px) {
-  #webcam-container canvas,
-  #webcam-container video {
-    width: 80vw;
-    max-width: 240px;
-    max-height: 240px;
-    aspect-ratio: 1 / 1;
-  }
-
-  #label-container {
-    position: relative;
-    bottom: 0;
-    margin-top: 8px;
-    font-size: 0.95rem;
-    line-height: 1.3em;
-    background: #ffffff;
-    border: 2px solid #3cb371;
-    border-radius: 10px;
-    padding: 8px 14px;
-    width: fit-content;
-    max-width: 85%;
-    display: inline-block;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  }
-
-  video, canvas {
-    transform: scale(0.96);
-  }
 }
 
 /* ====== NÚT ====== */
@@ -276,5 +245,28 @@ h3.title {
   #webcam-container video {
     width: 85vw;
     max-width: 260px;
+  }
+}
+
+/* ====== FIX KHUNG CAMERA HÌNH VUÔNG (MỚI) ====== */
+#webcam-container video {
+  width: 100% !important;
+  height: auto !important;
+  aspect-ratio: 1 / 1 !important;
+  object-fit: cover !important;
+  border-radius: 14px;
+  max-width: 280px;
+  max-height: 280px;
+  background: #fafff8;
+  border: 3px solid #2e8b57;
+  box-shadow:
+    0 0 0 3px rgba(60, 179, 113, 0.15),
+    0 4px 12px rgba(0, 0, 0, 0.2),
+    0 0 18px rgba(60, 179, 113, 0.25);
+}
+@media (max-width: 768px) {
+  #webcam-container video {
+    max-width: 240px;
+    max-height: 240px;
   }
 }
