@@ -2,10 +2,8 @@
 // 🤖 PHÂN LOẠI RÁC BẰNG AI - Teachable Machine + Camera Tự Động
 // ===================================================
 
-// ✅ Đường dẫn đến thư mục model (so với index.html)
 const MODEL_URL = "./model/";
 
-// ✅ Biến toàn cục
 let model, labelContainer;
 let webcam = null;
 let facingMode = "user"; // "user" (trước) | "environment" (sau)
@@ -21,11 +19,9 @@ async function init() {
     const modelURL = MODEL_URL + "model.json";
     const metadataURL = MODEL_URL + "metadata.json";
 
-    // Kiểm tra model có tồn tại không
     const check = await fetch(modelURL);
     if (!check.ok) throw new Error(`Không tìm thấy model tại ${modelURL}`);
 
-    // Tải model
     model = await tmImage.load(modelURL, metadataURL);
     maxPredictions = model.getTotalClasses();
 
@@ -34,7 +30,6 @@ async function init() {
 
     await startCamera();
     window.requestAnimationFrame(loop);
-
   } catch (err) {
     console.error("❌ Lỗi khởi tạo:", err);
     document.getElementById("label-container").innerHTML = `
@@ -52,49 +47,57 @@ async function startCamera() {
     if (webcam && webcam.stop) webcam.stop();
 
     const isMobile = /iPhone|Android|iPad/i.test(navigator.userAgent);
+    const size = isMobile ? 300 : 340; // 📏 rộng hơn, vẫn vuông 1:1
 
     const constraints = {
       audio: false,
       video: {
         facingMode: facingMode === "user" ? "user" : { exact: "environment" },
-        width: { ideal: 300 },
-        height: { ideal: 300 }
+        width: { ideal: size },
+        height: { ideal: size }
       }
     };
 
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
-    // ✅ Tạo phần tử video
+    // 🎥 Tạo phần tử video
     const video = document.createElement("video");
     video.setAttribute("autoplay", "");
-    video.setAttribute("muted", ""); // cần cho iOS để không bị chặn autoplay
-    video.setAttribute("playsinline", ""); // ngăn iPhone hiện "Live Broadcast"
-    video.width = 300;
-    video.height = 300;
+    video.setAttribute("muted", ""); // iOS cần muted để không chặn autoplay
+    video.setAttribute("playsinline", ""); // chặn iPhone bật full-screen
+
+    video.width = size;
+    video.height = size;
     video.srcObject = stream;
 
-    // 🎨 Giao diện camera
-    video.style.width = "300px";
-    video.style.height = "300px";
-    video.style.border = "3px solid #3cb371";
-    video.style.borderRadius = "14px";
-    video.style.aspectRatio = "1 / 1";
-    video.style.objectFit = "cover";
-    video.style.boxShadow = "0 4px 10px rgba(0,0,0,0.25)";
-    video.style.margin = "0 auto";
-    video.classList.add("active");
-
+    // ⚙️ Gắn vào DOM trước khi play() để tránh Safari bật full-screen
     const container = document.getElementById("webcam-container");
     container.innerHTML = "";
     container.appendChild(video);
 
-    // ✅ Gán stream cho biến webcam
+    try {
+      await video.play();
+    } catch (err) {
+      console.warn("Không thể autoplay video:", err);
+    }
+
+    // 🎨 Giao diện camera
+    video.style.width = `${size}px`;
+    video.style.height = `${size}px`;
+    video.style.border = "3px solid #3cb371";
+    video.style.borderRadius = "16px";
+    video.style.aspectRatio = "1 / 1";
+    video.style.objectFit = "cover";
+    video.style.boxShadow = "0 4px 12px rgba(0,0,0,0.25)";
+    video.style.margin = "0 auto";
+    video.style.display = "block";
+
     webcam = {
       canvas: video,
       stop: () => stream.getTracks().forEach(track => track.stop())
     };
 
-    labelContainer.innerHTML = "📸 Camera sẵn sàng – hãy đưa vật thể rác vào khung!";
+    labelContainer.innerHTML = "📸 Camera sẵn sàng – hãy đưa vật thể vào khung!";
 
   } catch (err) {
     console.error("❌ Lỗi mở camera:", err);
@@ -137,18 +140,23 @@ async function predict() {
       a.probability > b.probability ? a : b
     );
 
-    // Hiển thị kết quả
+    // 🎨 Khung kết quả gọn hơn, nổi bật
     labelContainer.innerHTML = `
       <div style="
-        background:#ffffff;
-        border:2px solid #2e8b57;
-        border-radius:14px;
-        padding:10px 20px;
-        display:inline-block;
-        box-shadow:0 2px 6px rgba(0,0,0,0.1);
+        background: linear-gradient(145deg, #ffffff, #eafff2);
+        border: 2px solid #2e8b57;
+        border-radius: 14px;
+        padding: 8px 16px;
+        display: inline-block;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #1f703e;
       ">
-        ♻️ <b>Loại rác:</b> ${best.className}<br>
-        🔍 <b>Độ tin cậy:</b> ${(best.probability * 100).toFixed(1)}%
+        ♻️ ${best.className}<br>
+        <span style="font-size: 0.85rem; color:#2c2c2c;">
+          🔍 ${(best.probability * 100).toFixed(1)}%
+        </span>
       </div>
     `;
   } catch (err) {
@@ -160,7 +168,7 @@ async function predict() {
 }
 
 // ===================================================
-// 🔐 Kiểm tra quyền camera (tùy chọn)
+// 🔐 Kiểm tra quyền camera
 // ===================================================
 async function checkCameraPermission() {
   try {
@@ -174,5 +182,4 @@ async function checkCameraPermission() {
   }
 }
 
-// ✅ Tự động kiểm tra khi tải trang
 checkCameraPermission();
