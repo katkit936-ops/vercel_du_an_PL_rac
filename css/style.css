@@ -88,20 +88,15 @@ h3.title {
 /* ====== CAMERA KHUNG HÌNH ====== */
 #webcam-container canvas,
 #webcam-container video {
-  width: 60vw;
-  max-width: 280px;
-  max-height: 280px;
+  width: 85vw;
+  max-width: 440px; /* tăng nhẹ từ 280 → 440 */
   aspect-ratio: 1 / 1;
-  border-radius: 14px;
-  border: 3px solid #2e8b57;
+  border: 4px solid #2e8b57;
+  border-radius: 18px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
   object-fit: cover;
-  background-color: #fafff8;
-  box-shadow:
-    0 0 0 3px rgba(60, 179, 113, 0.15),
-    0 4px 12px rgba(0, 0, 0, 0.2),
-    0 0 18px rgba(60, 179, 113, 0.25);
-  transition: all 0.3s ease;
 }
+
 
 /* ====== NÚT ====== */
 .btn-eco {
