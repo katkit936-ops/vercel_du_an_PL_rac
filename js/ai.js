@@ -52,52 +52,50 @@ async function startCamera() {
     if (webcam && webcam.stop) webcam.stop();
 
     const isMobile = /iPhone|Android|iPad/i.test(navigator.userAgent);
-    const size = isMobile ? 220 : 300; // nhỏ hơn cho điện thoại
 
     const constraints = {
       audio: false,
       video: {
         facingMode: facingMode === "user" ? "user" : { exact: "environment" },
-        width: { ideal: size },
-        height: { ideal: size }
+        width: { ideal: 300 },
+        height: { ideal: 300 }
       }
     };
 
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
+    // ✅ Tạo phần tử video
     const video = document.createElement("video");
-
-    // ⚙️ Tắt "Live Broadcast" trên iPhone & iPad
     video.setAttribute("autoplay", "");
-    video.setAttribute("muted", "");        // iOS yêu cầu video tự động phát phải tắt tiếng
-    video.setAttribute("playsinline", "");  // bắt buộc viết thường, không phải playsInline
-
-    video.width = 200;
-    video.height = 200;
+    video.setAttribute("muted", ""); // cần cho iOS để không bị chặn autoplay
+    video.setAttribute("playsinline", ""); // ngăn iPhone hiện "Live Broadcast"
+    video.width = 300;
+    video.height = 300;
     video.srcObject = stream;
 
     // 🎨 Giao diện camera
-    video.style.width = "200px";
-    video.style.height = "200px";
+    video.style.width = "300px";
+    video.style.height = "300px";
     video.style.border = "3px solid #3cb371";
     video.style.borderRadius = "14px";
-    video.style.maxWidth = isMobile ? "80vw" : "60vw";
     video.style.aspectRatio = "1 / 1";
     video.style.objectFit = "cover";
     video.style.boxShadow = "0 4px 10px rgba(0,0,0,0.25)";
+    video.style.margin = "0 auto";
     video.classList.add("active");
-
 
     const container = document.getElementById("webcam-container");
     container.innerHTML = "";
     container.appendChild(video);
 
+    // ✅ Gán stream cho biến webcam
     webcam = {
       canvas: video,
       stop: () => stream.getTracks().forEach(track => track.stop())
     };
 
-    labelContainer.innerHTML = "📸 Camera sẵn sàng – Hãy hướng vật thể vào khung!";
+    labelContainer.innerHTML = "📸 Camera sẵn sàng – hãy đưa vật thể rác vào khung!";
+
   } catch (err) {
     console.error("❌ Lỗi mở camera:", err);
     document.getElementById("label-container").innerHTML = `
@@ -113,7 +111,9 @@ async function startCamera() {
 // ===================================================
 async function switchCamera() {
   facingMode = facingMode === "user" ? "environment" : "user";
-  labelContainer.innerHTML = `🔄 Đang chuyển sang camera ${facingMode === "user" ? "trước" : "sau"}...`;
+  labelContainer.innerHTML = `🔄 Đang chuyển sang camera ${
+    facingMode === "user" ? "trước" : "sau"
+  }...`;
   await startCamera();
 }
 
@@ -140,7 +140,7 @@ async function predict() {
     // Hiển thị kết quả
     labelContainer.innerHTML = `
       <div style="
-        background:#fff;
+        background:#ffffff;
         border:2px solid #2e8b57;
         border-radius:14px;
         padding:10px 20px;
@@ -174,4 +174,5 @@ async function checkCameraPermission() {
   }
 }
 
+// ✅ Tự động kiểm tra khi tải trang
 checkCameraPermission();
