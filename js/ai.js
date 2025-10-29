@@ -72,11 +72,13 @@ async function startCamera() {
     video.setAttribute("muted", "");        // iOS yêu cầu video tự động phát phải tắt tiếng
     video.setAttribute("playsinline", "");  // bắt buộc viết thường, không phải playsInline
 
-    video.width = size;
-    video.height = size;
+    video.width = 200;
+    video.height = 200;
     video.srcObject = stream;
 
     // 🎨 Giao diện camera
+    video.style.width = "200px";
+    video.style.height = "200px";
     video.style.border = "3px solid #3cb371";
     video.style.borderRadius = "14px";
     video.style.maxWidth = isMobile ? "80vw" : "60vw";
@@ -85,15 +87,6 @@ async function startCamera() {
     video.style.boxShadow = "0 4px 10px rgba(0,0,0,0.25)";
     video.classList.add("active");
 
-
-    // Giao diện camera
-    video.style.border = "3px solid #3cb371";
-    video.style.borderRadius = "14px";
-    video.style.maxWidth = isMobile ? "80vw" : "60vw";
-    video.style.aspectRatio = "1 / 1";
-    video.style.objectFit = "cover";
-    video.style.boxShadow = "0 4px 10px rgba(0,0,0,0.25)";
-    video.classList.add("active");
 
     const container = document.getElementById("webcam-container");
     container.innerHTML = "";
