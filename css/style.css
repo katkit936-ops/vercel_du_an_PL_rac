@@ -78,7 +78,7 @@ h3.title {
   padding: 10px 0;
 }
 
-/* ====== CAMERA GỌN & CÓ HIỆU ỨNG ====== */
+/* ====== CAMERA CÂN ĐỐI, KHUNG GẦN VUÔNG ====== */
 #webcam-container {
   display: flex;
   justify-content: center;
@@ -86,16 +86,16 @@ h3.title {
   flex-direction: column;
   margin: 0 auto;
   padding: 15px 0;
-  overflow: hidden; /* tránh tạo thanh trượt */
+  overflow: hidden;
 }
 
 /* Khung camera chính */
 #webcam-container canvas,
 #webcam-container video {
-  width: 70vw;               /* 70% chiều rộng màn hình */
-  max-width: 260px;          /* gọn cho laptop */
-  aspect-ratio: 3 / 4;       /* tỷ lệ cao hợp mắt */
-  border-radius: 18px;
+  width: 65vw;              /* thu hẹp chiều ngang */
+  max-width: 300px;         /* gọn trên laptop */
+  aspect-ratio: 1 / 1;      /* khung vuông như bạn yêu cầu */
+  border-radius: 16px;
   border: 3px solid #2e8b57;
   margin: 10px auto;
   object-fit: cover;
@@ -107,7 +107,7 @@ h3.title {
   transition: all 0.3s ease;
 }
 
-/* Hiệu ứng khi bật camera */
+/* Hiệu ứng sáng viền khi bật camera */
 #webcam-container video.active {
   animation: glow 2.5s infinite ease-in-out;
 }
@@ -118,12 +118,12 @@ h3.title {
   100% { box-shadow: 0 0 0 4px rgba(60,179,113,0.15), 0 0 20px rgba(60,179,113,0.2); }
 }
 
-/* Nhãn kết quả nhận diện */
+/* Ô hiển thị loại rác */
 #label-container {
-  background: linear-gradient(90deg, #e7fce9, #f7fff8);
+  background: #ffffff;
   border: 2px solid #3cb371;
-  border-radius: 12px;
-  padding: 10px 18px;
+  border-radius: 14px;
+  padding: 12px 20px;
   width: fit-content;
   max-width: 90%;
   margin: 18px auto;
@@ -135,7 +135,6 @@ h3.title {
   text-align: center;
 }
 
-}
 
 /* ====== NÚT ====== */
 .btn-eco {
