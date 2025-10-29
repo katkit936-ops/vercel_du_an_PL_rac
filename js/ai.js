@@ -1,197 +1,166 @@
 // ===================================================
-// 🤖 PHÂN LOẠI RÁC BẰNG AI + GIỌNG NÓI TIẾNG VIỆT (TTS GOOGLE API)
+// 🤖 PHÂN LOẠI RÁC BẰNG AI - Teachable Machine + Camera
 // ===================================================
 
+// ✅ Đường dẫn tới model (tương đối với index.html)
 const MODEL_URL = "./model/";
-let model, labelContainer, webcam;
-let facingMode = "environment";
-let lastSpoken = "";
-let detecting = false;
-let stream = null;
-let audio = null;
-let stopRequested = false;
+
+// ✅ Biến toàn cục
+let model, labelContainer;
+let webcam = null;
+let facingMode = "user"; // "user" (camera trước) hoặc "environment" (camera sau)
+let maxPredictions = 0;
+let detecting = false; // kiểm soát vòng lặp dự đoán
 
 // ===================================================
-// 🚀 KHỞI TẠO MÔ HÌNH
+// 🚀 Khởi tạo mô hình & camera
 // ===================================================
 async function init() {
   try {
-    stopRequested = false;
-    if (webcam) stopCameraAndVoice();
-
-    labelContainer = document.getElementById("label-container");
-    labelContainer.innerHTML = "📷 Đang khởi tạo camera...";
+    await tf.setBackend("webgl").catch(() => tf.setBackend("cpu"));
 
     const modelURL = MODEL_URL + "model.json";
     const metadataURL = MODEL_URL + "metadata.json";
 
+    // Kiểm tra model tồn tại
+    const check = await fetch(modelURL);
+    if (!check.ok) throw new Error(`Không tìm thấy model tại ${modelURL}`);
+
+    // Tải mô hình
     model = await tmImage.load(modelURL, metadataURL);
+    maxPredictions = model.getTotalClasses();
+
+    // Gắn nhãn container
+    labelContainer = document.getElementById("label-container");
+    labelContainer.innerHTML = "📷 Đang khởi tạo camera...";
+
     await startCamera();
 
-    labelContainer.innerHTML = "📸 Camera sẵn sàng, hãy đưa vật thể vào khung!";
-    requestAnimationFrame(loop);
+    detecting = true;
+    window.requestAnimationFrame(loop);
+
   } catch (err) {
     console.error("❌ Lỗi khởi tạo:", err);
-    labelContainer.innerHTML = `<span style="color:red;">Không thể khởi động camera hoặc model.</span>`;
+    document.getElementById("label-container").innerHTML = `
+      ⚠️ <span style="color:red;">Không thể tải model hoặc khởi động camera.</span><br>
+      ${err.message}
+    `;
   }
 }
 
 // ===================================================
-// 🎥 KHỞI ĐỘNG CAMERA
+// 🎥 Khởi động camera
 // ===================================================
 async function startCamera() {
   try {
-    const size = /iPhone|Android/i.test(navigator.userAgent) ? 280 : 320;
+    if (webcam && webcam.stop) webcam.stop();
+
+    const isMobile = /iPhone|Android|iPad/i.test(navigator.userAgent);
+    const size = isMobile ? 260 : 300;
 
     const constraints = {
-      video: {
-        facingMode: facingMode,
-        width: { ideal: size },
-        height: { ideal: size },
-      },
       audio: false,
+      video: {
+        facingMode: facingMode === "user" ? "user" : { exact: "environment" },
+        width: { ideal: size },
+        height: { ideal: size }
+      }
     };
 
-    stream = await navigator.mediaDevices.getUserMedia(constraints);
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
     const video = document.createElement("video");
-    video.srcObject = stream;
-    video.autoplay = true;
-    video.playsInline = true;
-    video.muted = true;
     video.width = size;
     video.height = size;
+    video.autoplay = true;
+    video.playsInline = true; // cần thiết cho iOS
+    video.srcObject = stream;
     video.style.border = "3px solid #3cb371";
     video.style.borderRadius = "14px";
+    video.style.maxWidth = isMobile ? "85vw" : "320px";
+    video.style.aspectRatio = "1 / 1";
     video.style.objectFit = "cover";
+    video.style.boxShadow = "0 4px 12px rgba(0,0,0,0.25)";
+    video.muted = true;
 
     const container = document.getElementById("webcam-container");
     container.innerHTML = "";
     container.appendChild(video);
 
-    webcam = video;
+    webcam = {
+      canvas: video,
+      stop: () => stream.getTracks().forEach(track => track.stop())
+    };
+
+    labelContainer.innerHTML = "📸 Camera sẵn sàng – Hãy hướng vật thể vào khung!";
+
   } catch (err) {
-    console.error("❌ Không thể bật camera:", err);
-    labelContainer.innerHTML = "⚠️ Vui lòng cấp quyền camera để tiếp tục.";
+    console.error("❌ Lỗi mở camera:", err);
+    document.getElementById("label-container").innerHTML = `
+      ⚠️ Không thể mở camera.<br>
+      ${err.message}<br>
+      👉 Hãy kiểm tra quyền camera hoặc thử lại bằng Chrome.
+    `;
   }
 }
 
 // ===================================================
-// 🔄 CHUYỂN CAMERA TRƯỚC / SAU
+// 🔄 Chuyển camera (trước / sau)
 // ===================================================
 async function switchCamera() {
   facingMode = facingMode === "user" ? "environment" : "user";
-  stopCameraAndVoice();
-  await init();
+  labelContainer.innerHTML = `🔄 Đang chuyển sang camera ${facingMode === "user" ? "trước" : "sau"}...`;
+  await startCamera();
 }
 
 // ===================================================
-// 🔁 VÒNG LẶP DỰ ĐOÁN
+// 🔁 Vòng lặp dự đoán
 // ===================================================
 async function loop() {
-  if (stopRequested) return;
-  if (webcam && model && !detecting) {
-    detecting = true;
+  if (detecting && webcam && webcam.canvas && model) {
     await predict();
-    detecting = false;
   }
-  requestAnimationFrame(loop);
+  window.requestAnimationFrame(loop);
 }
 
 // ===================================================
-// 📊 DỰ ĐOÁN & ĐỌC KẾT QUẢ
+// 📊 Dự đoán vật thể
 // ===================================================
 async function predict() {
-  if (!webcam || webcam.readyState !== 4) return;
+  try {
+    const prediction = await model.predict(webcam.canvas);
+    const best = prediction.reduce((a, b) =>
+      a.probability > b.probability ? a : b
+    );
 
-  const prediction = await model.predict(webcam);
-  const best = prediction.reduce((a, b) =>
-    a.probability > b.probability ? a : b
-  );
-
-  if (best.probability > 0.8) {
-    const label = best.className;
-    const conf = (best.probability * 100).toFixed(1);
-
-    // Hiển thị kết quả
     labelContainer.innerHTML = `
       <div style="
-        background:#ffffff;
+        background:#fff;
         border:2px solid #2e8b57;
         border-radius:14px;
-        padding:10px 20px;
+        padding:10px 18px;
         display:inline-block;
-        font-weight:600;
-        color:#1f703e;
-        box-shadow:0 3px 8px rgba(0,0,0,0.1);
+        box-shadow:0 2px 6px rgba(0,0,0,0.1);
       ">
-        ♻️ Loại rác: ${label}<br>🔍 Độ tin cậy: ${conf}%
+        ♻️ <b>Loại rác:</b> ${best.className}<br>
+        🔍 <b>Độ tin cậy:</b> ${(best.probability * 100).toFixed(1)}%
       </div>
     `;
-
-    // Đọc giọng nói nếu nhãn thay đổi
-    if (label !== lastSpoken) {
-      lastSpoken = label;
-      speakText(`Đây là ${label}`);
-    }
-  } else {
-    labelContainer.innerHTML = "";
-    lastSpoken = "";
-  }
-}
-
-// ===================================================
-// 🔊 GIỌNG NÓI (Google TTS API thông qua server /api/tts)
-// ===================================================
-async function speakText(text) {
-  try {
-    if (!text) return;
-    if (audio) audio.pause();
-
-    const res = await fetch("/api/tts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
-    });
-
-    if (!res.ok) throw new Error("Không thể kết nối API TTS.");
-
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-
-    audio = new Audio(url);
-    audio.autoplay = true;
-
-    // fix autoplay cho Safari iOS
-    const playPromise = audio.play();
-    if (playPromise !== undefined) {
-      playPromise.catch(() => {
-        document.body.addEventListener(
-          "click",
-          () => audio.play(),
-          { once: true }
-        );
-      });
-    }
   } catch (err) {
-    console.warn("⚠️ Lỗi TTS:", err);
+    console.error("❌ Lỗi dự đoán:", err);
+    labelContainer.innerHTML = `
+      ⚠️ Không thể nhận diện. Vui lòng kiểm tra lại model hoặc camera.
+    `;
   }
 }
 
 // ===================================================
-// 🛑 DỪNG CAMERA + ÂM THANH
+// 🧩 Dừng camera (khi chuyển tab)
 // ===================================================
-function stopCameraAndVoice() {
-  stopRequested = true;
-  if (stream) {
-    stream.getTracks().forEach(t => t.stop());
-    stream = null;
-  }
-  if (audio) {
-    audio.pause();
-    audio = null;
-  }
+function stopCamera() {
+  detecting = false;
+  if (webcam && webcam.stop) webcam.stop();
   const container = document.getElementById("webcam-container");
   container.innerHTML = "";
-  if (labelContainer) labelContainer.innerHTML = "";
+  if (labelContainer) labelContainer.innerHTML = "📷 Camera đã tắt.";
 }
