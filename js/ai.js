@@ -1,5 +1,5 @@
 // ===================================================
-// 🤖 PHÂN LOẠI RÁC BẰNG AI - CÓ GIỌNG NÓI HOẠT ĐỘNG TRÊN ĐIỆN THOẠI
+// 🤖 PHÂN LOẠI RÁC BẰNG AI - GIẢN LƯỢC GIAO DIỆN, TỐI ƯU TRÊN MOBILE
 // ===================================================
 
 const MODEL_URL = "./model/";
@@ -8,35 +8,32 @@ let webcam = null;
 let facingMode = "user";
 let maxPredictions = 0;
 
-// Biến điều khiển
+// Cấu hình
 let isRunning = false;
-let voiceEnabled = false; // bật/tắt giọng nói
 let lastSpokenClass = "";
 let lastSpokenTime = 0;
 
 // Cấu hình tốc độ
-const FRAME_INTERVAL = 150;
-const DETECTION_THRESHOLD = 0.75;
-const STABLE_THRESHOLD = 3;
+const FRAME_INTERVAL = 150;        // ms giữa mỗi lần dự đoán
+const DETECTION_THRESHOLD = 0.75;   // xác suất tối thiểu để được tính
+const STABLE_THRESHOLD = 3;        // cần ổn định 3 khung hình
 
 // ===================================================
-// 🚀 Khởi tạo mô hình + camera
+// 🚀 Khởi tạo mô hình và camera
 // ===================================================
 async function init() {
   try {
     if (isRunning) return;
     isRunning = true;
 
-    // Đánh thức audio context cho iOS/Android
+    // “Đánh thức” audio context cho iOS/Android
     try {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator = audioCtx.createOscillator();
-      oscillator.connect(audioCtx.destination);
-      oscillator.start(0);
-      oscillator.stop(0);
-    } catch (e) {
-      console.warn("Không thể khởi tạo audio context:", e);
-    }
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      osc.connect(ctx.destination);
+      osc.start(0);
+      osc.stop(0);
+    } catch {}
 
     await tf.setBackend("webgl").catch(() => tf.setBackend("cpu"));
     const modelURL = MODEL_URL + "model.json";
@@ -52,7 +49,7 @@ async function init() {
     labelContainer.innerHTML = "📷 Đang khởi tạo camera...";
 
     await startCamera();
-    loop();
+    loop(); // bắt đầu vòng lặp liên tục
   } catch (err) {
     console.error("❌ Lỗi khởi tạo:", err);
     labelContainer.innerHTML = `
@@ -109,7 +106,7 @@ async function startCamera() {
       stop: () => stream.getTracks().forEach(track => track.stop())
     };
 
-    labelContainer.innerHTML = "📸 Camera sẵn sàng – hãy đưa rác vào khung!";
+    labelContainer.innerHTML = "📸 Hãy đưa rác vào khung!";
   } catch (err) {
     console.error("❌ Lỗi camera:", err);
     labelContainer.innerHTML = `
@@ -143,7 +140,7 @@ async function loop() {
 }
 
 // ===================================================
-// 📊 Dự đoán thông minh + giọng nói
+// 📊 Dự đoán thông minh + giọng nói mặc định
 // ===================================================
 async function predict() {
   try {
@@ -155,26 +152,13 @@ async function predict() {
     const currentClass = best.className;
     const confidence = best.probability;
 
-    // Nếu chưa có vật thể
+    // Không đủ độ tin cậy → không làm gì
     if (confidence < DETECTION_THRESHOLD) {
-      labelContainer.innerHTML = `
-        <div style="
-          background:#fff;
-          border:2px dashed #3cb371;
-          border-radius:14px;
-          padding:10px 20px;
-          display:inline-block;
-          box-shadow:0 2px 6px rgba(0,0,0,0.1);
-          font-weight:600;
-          color:#2e8b57;">
-          🗑️ Hãy cho tôi rác!
-        </div>`;
-      lastSpokenClass = "";
       stableCount = 0;
       return;
     }
 
-    // Khi có vật thể
+    // Khi có vật thể rõ ràng
     if (currentClass === lastPrediction) stableCount++;
     else stableCount = 0;
     lastPrediction = currentClass;
@@ -198,17 +182,14 @@ async function predict() {
           </span>
         </div>`;
 
-      // Chỉ nói nếu bật giọng
-      if (voiceEnabled) {
-        const now = Date.now();
-        if (
-          (currentClass !== lastSpokenClass && confidence > 0.8) ||
-          now - lastSpokenTime > 4000
-        ) {
-          speakGoogleTTS(`Đây là ${currentClass}`);
-          lastSpokenClass = currentClass;
-          lastSpokenTime = now;
-        }
+      const now = Date.now();
+      if (
+        (currentClass !== lastSpokenClass && confidence > 0.8) ||
+        now - lastSpokenTime > 4000
+      ) {
+        speakGoogleTTS(`Đây là ${currentClass}`);
+        lastSpokenClass = currentClass;
+        lastSpokenTime = now;
       }
     }
   } catch (err) {
@@ -217,7 +198,7 @@ async function predict() {
 }
 
 // ===================================================
-// 🔊 Giọng nói Google tiếng Việt
+// 🔊 Giọng nói Google tiếng Việt (mặc định bật)
 // ===================================================
 function speakGoogleTTS(text) {
   if (!window.speechSynthesis) return;
@@ -225,7 +206,7 @@ function speakGoogleTTS(text) {
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = "vi-VN";
   utter.pitch = 1;
-  utter.rate = 0.95;
+  utter.rate = 1;
   utter.volume = 1;
 
   const voices = window.speechSynthesis.getVoices();
@@ -237,15 +218,7 @@ function speakGoogleTTS(text) {
 }
 
 // ===================================================
-// 🔈 Bật / Tắt giọng nói
-// ===================================================
-function toggleVoice() {
-  voiceEnabled = !voiceEnabled;
-  alert(voiceEnabled ? "🔊 Giọng nói đã bật" : "🔇 Giọng nói đã tắt");
-}
-
-// ===================================================
-// 🧩 Dừng camera & giọng nói khi đổi tab
+// 🧩 Dừng camera & giọng nói
 // ===================================================
 function stopCameraAndVoice() {
   if (webcam && webcam.stop) webcam.stop();
@@ -253,3 +226,17 @@ function stopCameraAndVoice() {
   isRunning = false;
   labelContainer.innerHTML = "⏹️ Camera đã dừng.";
 }
+
+// ===================================================
+// 🔐 Kiểm tra quyền camera
+// ===================================================
+async function checkCameraPermission() {
+  try {
+    if (!navigator.permissions) return;
+    const status = await navigator.permissions.query({ name: "camera" });
+    if (status.state === "denied") {
+      alert("❗ Ứng dụng chưa được cấp quyền camera. Hãy vào Cài đặt để bật lại.");
+    }
+  } catch {}
+}
+checkCameraPermission();
