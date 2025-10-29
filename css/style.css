@@ -108,3 +108,28 @@ h3.title {
 .gallery img:hover {
   transform: scale(1.05);
 }
+
+/* ====== Footer cố định cuối trang ====== */
+.footer-fixed {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: #3cb371;
+  color: white;
+  text-align: center;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 5px;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.25);
+  z-index: 9999;
+}
+
+.footer-fixed a {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.footer-fixed a:hover {
+  color: #d4f4d7;
+}
