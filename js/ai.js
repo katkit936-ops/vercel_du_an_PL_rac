@@ -1,13 +1,18 @@
 // ===================================================
-// 🤖 PHÂN LOẠI RÁC BẰNG AI - Teachable Machine + Camera Tự Động
+// 🤖 PHÂN LOẠI RÁC BẰNG AI - Teachable Machine + Giọng nói
 // ===================================================
 
 const MODEL_URL = "./model/";
 
 let model, labelContainer;
 let webcam = null;
-let facingMode = "user"; // "user" (trước) | "environment" (sau)
+let facingMode = "user";
 let maxPredictions = 0;
+
+// Biến kiểm soát giọng nói
+let lastSpokenClass = "";
+let lastSpokenTime = 0;
+const speakDelay = 2500; // nói cách nhau ít nhất 2.5s
 
 // ===================================================
 // 🚀 Khởi tạo mô hình & camera
@@ -32,7 +37,7 @@ async function init() {
     window.requestAnimationFrame(loop);
   } catch (err) {
     console.error("❌ Lỗi khởi tạo:", err);
-    document.getElementById("label-container").innerHTML = `
+    labelContainer.innerHTML = `
       ⚠️ <span style="color:red;">Không thể tải model hoặc khởi động camera.</span><br>
       ${err.message}
     `;
@@ -40,14 +45,14 @@ async function init() {
 }
 
 // ===================================================
-// 🎥 Khởi động camera (Tối ưu cho di động & laptop)
+// 🎥 Khởi động camera
 // ===================================================
 async function startCamera() {
   try {
     if (webcam && webcam.stop) webcam.stop();
 
     const isMobile = /iPhone|Android|iPad/i.test(navigator.userAgent);
-    const size = isMobile ? 300 : 340; // 📏 rộng hơn, vẫn vuông 1:1
+    const size = isMobile ? 340 : 440; // khung to hơn, vẫn 1:1
 
     const constraints = {
       audio: false,
@@ -60,36 +65,28 @@ async function startCamera() {
 
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
-    // 🎥 Tạo phần tử video
     const video = document.createElement("video");
     video.setAttribute("autoplay", "");
-    video.setAttribute("muted", ""); // iOS cần muted để không chặn autoplay
-    video.setAttribute("playsinline", ""); // chặn iPhone bật full-screen
-
+    video.setAttribute("muted", "");
+    video.setAttribute("playsinline", "");
     video.width = size;
     video.height = size;
     video.srcObject = stream;
 
-    // ⚙️ Gắn vào DOM trước khi play() để tránh Safari bật full-screen
     const container = document.getElementById("webcam-container");
     container.innerHTML = "";
     container.appendChild(video);
+    await video.play();
 
-    try {
-      await video.play();
-    } catch (err) {
-      console.warn("Không thể autoplay video:", err);
-    }
-
-    // 🎨 Giao diện camera
+    // 🎨 Giao diện
     video.style.width = `${size}px`;
     video.style.height = `${size}px`;
-    video.style.border = "3px solid #3cb371";
-    video.style.borderRadius = "16px";
+    video.style.border = "4px solid #2e8b57";
+    video.style.borderRadius = "18px";
     video.style.aspectRatio = "1 / 1";
     video.style.objectFit = "cover";
-    video.style.boxShadow = "0 4px 12px rgba(0,0,0,0.25)";
-    video.style.margin = "0 auto";
+    video.style.boxShadow = "0 6px 14px rgba(0,0,0,0.25)";
+    video.style.margin = "10px auto";
     video.style.display = "block";
 
     webcam = {
@@ -97,11 +94,10 @@ async function startCamera() {
       stop: () => stream.getTracks().forEach(track => track.stop())
     };
 
-    labelContainer.innerHTML = "📸 Camera sẵn sàng – hãy đưa vật thể vào khung!";
-
+    labelContainer.innerHTML = "📸 Camera sẵn sàng – hãy hướng vật thể vào khung!";
   } catch (err) {
     console.error("❌ Lỗi mở camera:", err);
-    document.getElementById("label-container").innerHTML = `
+    labelContainer.innerHTML = `
       ⚠️ Không thể mở camera.<br>
       ${err.message}<br>
       👉 Kiểm tra quyền truy cập camera hoặc thử lại bằng Chrome.
@@ -121,8 +117,12 @@ async function switchCamera() {
 }
 
 // ===================================================
-// 🔁 Vòng lặp dự đoán liên tục
+// 🔁 Vòng lặp dự đoán liên tục (ổn định, không spam)
 // ===================================================
+let lastPrediction = "";
+let stableCount = 0;
+const stableThreshold = 4; // cần 4 frame giống nhau mới xác nhận kết quả
+
 async function loop() {
   if (webcam && webcam.canvas && model) {
     await predict();
@@ -131,7 +131,7 @@ async function loop() {
 }
 
 // ===================================================
-// 📊 Dự đoán kết quả
+// 📊 Dự đoán + Giọng nói
 // ===================================================
 async function predict() {
   try {
@@ -140,31 +140,70 @@ async function predict() {
       a.probability > b.probability ? a : b
     );
 
-    // 🎨 Khung kết quả gọn hơn, nổi bật
-    labelContainer.innerHTML = `
-      <div style="
-        background: linear-gradient(145deg, #ffffff, #eafff2);
-        border: 2px solid #2e8b57;
-        border-radius: 14px;
-        padding: 8px 16px;
-        display: inline-block;
-        box-shadow: 0 3px 8px rgba(0,0,0,0.15);
-        font-size: 0.95rem;
-        font-weight: 700;
-        color: #1f703e;
-      ">
-        ♻️ ${best.className}<br>
-        <span style="font-size: 0.85rem; color:#2c2c2c;">
-          🔍 ${(best.probability * 100).toFixed(1)}%
-        </span>
-      </div>
-    `;
+    const currentClass = best.className;
+    const confidence = (best.probability * 100).toFixed(1);
+
+    // Giữ kết quả ổn định trước khi hiển thị
+    if (currentClass === lastPrediction) {
+      stableCount++;
+    } else {
+      stableCount = 0;
+    }
+    lastPrediction = currentClass;
+
+    // Chỉ hiển thị nếu ổn định vài khung
+    if (stableCount >= stableThreshold) {
+      labelContainer.innerHTML = `
+        <div style="
+          background: linear-gradient(145deg, #ffffff, #eafff2);
+          border: 2px solid #2e8b57;
+          border-radius: 14px;
+          padding: 8px 16px;
+          display: inline-block;
+          box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+          font-size: 1rem;
+          font-weight: 700;
+          color: #1f703e;
+        ">
+          ♻️ ${currentClass}<br>
+          <span style="font-size: 0.9rem; color:#2c2c2c;">
+            🔍 ${confidence}%
+          </span>
+        </div>
+      `;
+
+      // 🔊 Phát giọng nói chỉ khi loại rác đổi hoặc độ tin cậy > 80%
+      const now = Date.now();
+      if (
+        (currentClass !== lastSpokenClass && confidence > 75) ||
+        now - lastSpokenTime > speakDelay * 2
+      ) {
+        speakVietnamese(`Đây là ${currentClass}`);
+        lastSpokenClass = currentClass;
+        lastSpokenTime = now;
+      }
+    }
   } catch (err) {
     console.error("❌ Lỗi dự đoán:", err);
     labelContainer.innerHTML = `
       ⚠️ Không thể nhận diện. Vui lòng kiểm tra lại model hoặc camera.
     `;
   }
+}
+
+// ===================================================
+// 🔊 Giọng nói tiếng Việt (SpeechSynthesis)
+// ===================================================
+function speakVietnamese(text) {
+  if (!("speechSynthesis" in window)) return;
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "vi-VN";
+  utterance.rate = 0.95; // tốc độ nói chậm rãi
+  utterance.pitch = 1;
+  utterance.volume = 1;
+  window.speechSynthesis.cancel(); // tránh chồng tiếng
+  window.speechSynthesis.speak(utterance);
 }
 
 // ===================================================
